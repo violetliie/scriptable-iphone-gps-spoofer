@@ -15,6 +15,9 @@ didn't want to give out my bank information to some hacker.
 The plan was simple: build a thing that puts me at the library while I am demonstrably not at
 the library, ship it, go outside, lol.
 
+Then I found out the fake location only holds while the phone is plugged into my laptop. Unplug
+it and the real GPS is back instantly. So I can be at the library, as long as I am at home.
+
 I built a machine whose only function is to prove I am at home (or where ever they trust).
 
 Anyway, it turns out to be a genuinely useful developer tool, so here it is.
