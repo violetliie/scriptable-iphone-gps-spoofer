@@ -181,6 +181,8 @@ just hangs.
 | **Route** | Drop waypoints, or import a GPX file, then walk the line at a set speed. Supports loop and ping pong. |
 | **Joystick** | Steer live with the on screen pad or W/A/S/D. Space stops. |
 
+![Joystick mode](docs/screenshots/joystick.png)
+
 **Saved places** stores named locations for one click recall, plus a "Last used" button.
 Everything persists in `~/.iphone-location-simulator/favorites.json`.
 
@@ -220,7 +222,7 @@ pymobiledevice3. Five external hosts are contacted:
 | `api.github.com`, `raw.githubusercontent.com` | first connect only | Downloads the ~15 MB personalized DDI from [doronz88/DeveloperDiskImage](https://github.com/doronz88/DeveloperDiskImage), a third party mirror rather than Apple. This is the one real trust decision in the stack. It is the same image Xcode ships, and Apple's signing server still has to approve it for your device, but the bytes come from GitHub. |
 | `gs.apple.com` | first connect only | Apple's TSS signing server personalizes the DDI for your phone. It receives your device's ECID, ChipID and BoardID. This is the same exchange Xcode and iTunes perform. |
 | `basemaps.cartocdn.com` | while the map is open | Map tiles, so it sees roughly where you are looking. Inherent to any web map. |
-| `nominatim.openstreetmap.org` | only when you type a place name | Your typed query. Typing raw coordinates never touches the network. |
+| `nominatim.openstreetmap.org` | only when you press Enter on a place name | Your typed query. Nothing is sent while you type, and raw coordinates never touch the network at all. |
 | `pypi.org` | first install only | Package downloads. |
 
 Leaflet is vendored in `static/vendor/` rather than loaded from a CDN, so no executable code is
