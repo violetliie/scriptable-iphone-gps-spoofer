@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPhone Location Simulator</title>
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c232d;
+    --line: #2a323d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #3fb950;
+    --accent-dim: #23823a;
+    --warn: #d29922;
+    --err: #f85149;
+    --blue: #4493f8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden;
+  }
+  #map { flex: 1; height: 100%; background: #0b0e12; }
+  .leaflet-container { font: inherit; }
+
+  aside {
+    width: 340px; height: 100%; flex: none; background: var(--panel);
+    border-left: 1px solid var(--line); overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  h1 { font-size: 15px; margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  section { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  section > h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); margin: 0 0 10px; font-weight: 600;
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  button, select, input[type=text], input[type=number] {
+    font: inherit; color: var(--text); background: #222b36;
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%;
+  }
+  button { cursor: pointer; transition: background .12s, border-color .12s; }
+  button:hover:not(:disabled) { background: #2c3745; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent-dim); border-color: var(--accent-dim); font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent); }
+  button.danger { background: #7d2620; border-color: #7d2620; }
+  button.danger:hover:not(:disabled) { background: var(--err); }
+  button.active { background: var(--blue); border-color: var(--blue); color: #04101f; font-weight: 600; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+
+  #status { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.connected { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .dot.connecting { background: var(--warn); animation: pulse 1s infinite; }
+  .dot.error { background: var(--err); }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  .note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+  .banner { border-radius: 7px; padding: 9px 10px; font-size: 12px; margin-top: 10px; line-height: 1.4; }
+  .banner.err { background: #3d1a17; border: 1px solid #7d2620; color: #ffb4ad; }
+  .banner.info { background: #16283d; border: 1px solid #1f4a75; color: #a5d0ff; }
+
+  .seg { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; border-right: 1px solid var(--line); font-size: 12px; padding: 7px 4px; }
+  .seg button:last-child { border-right: 0; }
+
+  #pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+  #pad button { aspect-ratio: 1; padding: 0; font-size: 15px; }
+  #pad .center { background: #2a3441; font-size: 11px; }
+
+  .readout {
+    font: 12px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--muted); background: #11161d; border: 1px solid var(--line);
+    border-radius: 7px; padding: 8px 10px; word-break: break-all;
+  }
+  .readout b { color: var(--text); font-weight: 600; }
+
+  input[type=range] { width: 100%; accent-color: var(--blue); }
+  .inline { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .inline label { margin: 0; }
+  .val { font: 12px ui-monospace, Menlo, monospace; color: var(--text); }
+  .hidden { display: none !important; }
+  #searchResults { margin-top: 6px; max-height: 150px; overflow-y: auto; }
+  .fav { display: flex; gap: 6px; align-items: stretch; }
+  .fav button.go { flex: 1; text-align: left; font-size: 12px; padding: 7px 9px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fav button.del { flex: none; width: 30px; padding: 0; color: var(--muted); font-size: 15px; line-height: 1; }
+  .fav button.del:hover { color: var(--err); }
+  #searchResults button { text-align: left; font-size: 12px; padding: 6px 8px; margin-bottom: 4px; }
+  footer { font-size: 11px; color: #5c6672; line-height: 1.5; }
+
+  .pin { filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<aside>
+  <h1>iPhone Location <span>Simulator</span></h1>
+
+  <section>
+    <h2>Device</h2>
+    <div id="status"><span class="dot" id="dot"></span><span id="statusText">Disconnected</span></div>
+    <div class="stack" style="margin-top:10px">
+      <select id="deviceSelect"><option value="">Scanning…</option></select>
+      <div class="row">
+        <button id="btnRefresh">Refresh</button>
+        <button id="btnConnect" class="primary">Connect</button>
+      </div>
+      <button id="btnDisconnect" class="hidden">Disconnect</button>
+      <button id="btnReveal">No "Developer Mode" in Settings?</button>
+    </div>
+    <div id="banner" class="banner hidden"></div>
+  </section>
+
+  <section>
+    <h2>Saved places</h2>
+    <div id="favList" class="stack"></div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnSaveFav">Save current spot</button>
+      <button id="btnLastSpot">Last used</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Search</h2>
+    <input type="text" id="search" placeholder="Address (Enter), or 37.7749, -122.4194" autocomplete="off">
+    <div id="searchResults"></div>
+  </section>
+
+  <section>
+    <h2>Mode</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="teleport" class="active">Teleport</button>
+      <button data-mode="route">Route</button>
+      <button data-mode="joystick">Joystick</button>
+    </div>
+
+    <p class="note" id="modeHint">Click anywhere on the map to place the device there.</p>
+
+    <!-- Route controls -->
+    <div id="routePanel" class="stack hidden" style="margin-top:10px">
+      <div class="readout"><b id="routeCount">0</b> waypoints · <b id="routeLen">0 m</b></div>
+      <div class="row">
+        <button id="btnRouteUndo">Undo</button>
+        <button id="btnRouteClear">Clear</button>
+      </div>
+      <div class="row">
+        <button id="btnRouteLoop">Loop: off</button>
+        <button id="btnRoutePing">Ping-pong: off</button>
+      </div>
+      <div class="row">
+        <button id="btnRouteStart" class="primary">Walk route</button>
+        <button id="btnPause">Pause</button>
+      </div>
+      <label style="margin-top:2px">Import GPX</label>
+      <input type="file" id="gpxFile" accept=".gpx,application/gpx+xml" style="font-size:12px">
+    </div>
+
+    <!-- Joystick controls -->
+    <div id="joyPanel" class="hidden" style="margin-top:10px">
+      <div id="pad">
+        <button data-bearing="315">↖</button>
+        <button data-bearing="0">↑</button>
+        <button data-bearing="45">↗</button>
+        <button data-bearing="270">←</button>
+        <button class="center" id="btnJoyStop">STOP</button>
+        <button data-bearing="90">→</button>
+        <button data-bearing="225">↙</button>
+        <button data-bearing="180">↓</button>
+        <button data-bearing="135">↘</button>
+      </div>
+      <p class="note">Or steer with W/A/S/D and the arrow keys. Space stops.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Motion</h2>
+    <div class="inline"><label for="speed">Speed</label><span class="val" id="speedVal">5.0 km/h</span></div>
+    <input type="range" id="speed" min="0.5" max="120" step="0.5" value="5">
+    <div class="seg" style="margin-top:8px">
+      <button data-speed="1.5">Stroll</button>
+      <button data-speed="5">Walk</button>
+      <button data-speed="12">Run</button>
+      <button data-speed="25">Bike</button>
+      <button data-speed="60">Drive</button>
+    </div>
+    <div class="inline" style="margin-top:12px"><label for="jitter">GPS noise</label><span class="val" id="jitterVal">0 m</span></div>
+    <input type="range" id="jitter" min="0" max="20" step="1" value="0">
+  </section>
+
+  <section>
+    <h2>Reported position</h2>
+    <div class="readout" id="readout">No simulated fix.</div>
+    <div class="stack" style="margin-top:10px">
+      <button id="btnFollow" class="active">Follow on map: on</button>
+      <button id="btnReset" class="danger">Restore real GPS</button>
+    </div>
+  </section>
+
+  <footer>
+    Drives Apple's own <code>LocationSimulation</code> DTX service — the same one behind
+    Xcode's Simulate Location. The fix lasts while this app holds the channel open.
+  </footer>
+</aside>
+
+<script src="/static/vendor/leaflet.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  mode: 'teleport',
+  waypoints: [],
+  loop: false,
+  pingPong: false,
+  follow: true,
+  paused: false,
+  server: null,
+};
+
+/* ---------------------------------------------------------------- map --- */
+
+const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([37.7749, -122.4194], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 20,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, '
+    + '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
+}).addTo(map);
+
+const deviceIcon = L.divIcon({
+  className: '',
+  html: '<svg class="pin" width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#4493f8" fill-opacity=".25"/><circle cx="13" cy="13" r="6" fill="#4493f8" stroke="#fff" stroke-width="2.5"/></svg>',
+  iconSize: [26, 26], iconAnchor: [13, 13],
+});
+
+let deviceMarker = null;
+let trail = L.polyline([], { color: '#4493f8', weight: 2, opacity: 0.55 }).addTo(map);
+let routeLine = L.polyline([], { color: '#3fb950', weight: 3, dashArray: '6 5' }).addTo(map);
+let routeMarkers = [];
+
+map.on('click', (e) => {
+  const { lat, lng } = e.latlng;
+  if (state.mode === 'route') { addWaypoint(lat, lng); return; }
+  post('/api/teleport', { lat, lon: lng });
+});
+
+/* ------------------------------------------------------------- plumbing -- */
+
+async function post(path, body) {
+  try {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { showBanner(data.error || data.detail || res.statusText, data.hint, 'err'); return null; }
+    hideBanner();
+    if (data.status) render(data);
+    return data;
+  } catch (err) {
+    showBanner(String(err), 'Is the server still running?', 'err');
+    return null;
+  }
+}
+
+function showBanner(msg, hint, kind) {
+  const el = $('banner');
+  el.className = 'banner ' + (kind || 'info');
+  el.innerHTML = `<b>${escapeHtml(msg)}</b>` + (hint ? `<br>${escapeHtml(hint)}` : '');
+}
+function hideBanner() { $('banner').className = 'banner hidden'; }
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+/* ---------------------------------------------------------------- state -- */
+
+function render(s) {
+  const first = state.server === null;
+  state.server = s;
+  if (first && s.status === 'connected') {
+    // Reloading the page shouldn't lose the session's speed / noise settings.
+    if (s.speed_kmh > 0) { $('speed').value = s.speed_kmh; $('speedVal').textContent = s.speed_kmh.toFixed(1) + ' km/h'; }
+    $('jitter').value = s.jitter_m;
+    $('jitterVal').textContent = s.jitter_m + ' m';
+    if (s.route && s.route.length >= 2) { state.waypoints = s.route.map((p) => [p[0], p[1]]); drawRoute(); }
+  }
+  const dot = $('dot');
+  dot.className = 'dot ' + s.status;
+  const label = {
+    connected: s.device && s.device.name ? `${s.device.name} · iOS ${s.device.ios}` : 'Connected',
+    connecting: s.progress || 'Connecting…',
+    disconnected: 'Disconnected',
+    error: 'Error',
+  }[s.status] || s.status;
+  $('statusText').textContent = label;
+
+  const live = s.status === 'connected';
+  $('btnConnect').classList.toggle('hidden', live || s.status === 'connecting');
+  $('btnRefresh').classList.toggle('hidden', live || s.status === 'connecting');
+  $('btnDisconnect').classList.toggle('hidden', !live);
+  $('deviceSelect').classList.toggle('hidden', live);
+
+  if (s.status === 'error' && s.error) showBanner(s.error, s.hint, 'err');
+  else if (s.status === 'connecting' && s.progress) showBanner(s.progress, '', 'info');
+  else if (s.status === 'connected') hideBanner();
+
+  state.paused = s.paused;
+  $('btnPause').textContent = s.paused ? 'Resume' : 'Pause';
+
+  if (s.lat != null && s.lon != null) {
+    const p = [s.lat, s.lon];
+    if (!deviceMarker) deviceMarker = L.marker(p, { icon: deviceIcon, interactive: false }).addTo(map);
+    else deviceMarker.setLatLng(p);
+    const pts = trail.getLatLngs();
+    const last = pts[pts.length - 1];
+    if (!last || map.distance(last, p) > 1) trail.addLatLng(p);
+    if (pts.length > 3000) trail.setLatLngs(pts.slice(-1500));
+    if (state.follow && !map.getBounds().pad(-0.25).contains(p)) map.panTo(p, { animate: true });
+    const noisy = s.jitter_m > 0 && s.sent_lat != null
+      ? `<br>sent to phone: <b>${s.sent_lat.toFixed(6)}, ${s.sent_lon.toFixed(6)}</b>` +
+        ` (${Math.round(map.distance(p, [s.sent_lat, s.sent_lon]))} m off)`
+      : '';
+    $('readout').innerHTML =
+      `<b>${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</b>${noisy}<br>` +
+      `mode ${s.mode}${s.paused ? ' (paused)' : ''} · hdg ${Math.round(s.heading)}°<br>` +
+      `${s.speed_kmh.toFixed(1)} km/h · ${s.pushes} updates sent`;
+  } else {
+    if (deviceMarker) { map.removeLayer(deviceMarker); deviceMarker = null; }
+    trail.setLatLngs([]);
+    $('readout').textContent = 'No simulated fix.';
+  }
+}
+
+const es = new EventSource('/api/events');
+es.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch (_) {} };
+
+/* --------------------------------------------------------------- devices */
+
+async function refreshDevices() {
+  const sel = $('deviceSelect');
+  sel.innerHTML = '<option value="">Scanning…</option>';
+  try {
+    const res = await fetch('/api/devices');
+    const { devices } = await res.json();
+    if (!devices.length) {
+      sel.innerHTML = '<option value="">No device attached</option>';
+      showBanner('No iPhone detected over USB.', 'Plug it in, unlock it, and tap Trust.', 'info');
+      return;
+    }
+    hideBanner();
+    sel.innerHTML = devices.map((d) => {
+      const bits = [d.name || d.model || d.udid.slice(0, 8)];
+      if (d.ios) bits.push('iOS ' + d.ios);
+      if (d.paired === false) bits.push('not trusted');
+      else if (d.developer_mode === false) bits.push('dev mode off');
+      return `<option value="${escapeHtml(d.udid)}">${escapeHtml(bits.join(' · '))}</option>`;
+    }).join('');
+    const bad = devices.find((d) => d.paired === false || d.developer_mode === false);
+    if (bad && bad.paired === false) showBanner('Device is not trusted yet.', 'Unlock it and tap "Trust This Computer".', 'info');
+    else if (bad) showBanner('Developer Mode is off.', 'Settings → Privacy & Security → Developer Mode, then restart.', 'info');
+  } catch (err) {
+    sel.innerHTML = '<option value="">Scan failed</option>';
+    showBanner(String(err), '', 'err');
+  }
+}
+
+$('btnReveal').onclick = async () => {
+  const btn = $('btnReveal');
+  btn.disabled = true;
+  btn.textContent = 'Asking the phone…';
+  const res = await post('/api/reveal-developer-mode', { udid: $('deviceSelect').value || null });
+  btn.disabled = false;
+  btn.textContent = 'No "Developer Mode" in Settings?';
+  if (!res) return;
+  if (res.already_enabled) {
+    showBanner('Developer Mode is already on.', 'You can hit Connect.', 'info');
+  } else {
+    showBanner(
+      'Done — now look on the phone.',
+      'Settings → Privacy & Security → Developer Mode should be there now. Turn it on, let the '
+      + 'phone restart, confirm the prompt after it boots, then come back and hit Connect.',
+      'info');
+  }
+};
+
+$('btnRefresh').onclick = refreshDevices;
+$('btnConnect').onclick = () => post('/api/connect', { udid: $('deviceSelect').value || null });
+$('btnDisconnect').onclick = () => post('/api/disconnect');
+$('btnReset').onclick = () => { trail.setLatLngs([]); post('/api/clear'); };
+
+/* ----------------------------------------------------------------- modes */
+
+$('modeSeg').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (!btn) return;
+  state.mode = btn.dataset.mode;
+  [...$('modeSeg').children].forEach((b) => b.classList.toggle('active', b === btn));
+  $('routePanel').classList.toggle('hidden', state.mode !== 'route');
+  $('joyPanel').classList.toggle('hidden', state.mode !== 'joystick');
+  $('modeHint').textContent = {
+    teleport: 'Click anywhere on the map to place the device there.',
+    route: 'Click the map to drop waypoints, then walk the line.',
+    joystick: 'Place yourself first, then steer. Speed applies live.',
+  }[state.mode];
+});
+
+/* ---------------------------------------------------------------- routes */
+
+function addWaypoint(lat, lon) {
+  state.waypoints.push([lat, lon]);
+  drawRoute();
+}
+function drawRoute() {
+  routeLine.setLatLngs(state.waypoints);
+  routeMarkers.forEach((m) => map.removeLayer(m));
+  routeMarkers = state.waypoints.map((p, i) =>
+    L.circleMarker(p, { radius: 4, color: '#3fb950', fillColor: '#0e1116', fillOpacity: 1, weight: 2 })
+      .bindTooltip(String(i + 1), { permanent: false }).addTo(map));
+  let metres = 0;
+  for (let i = 1; i < state.waypoints.length; i++) metres += map.distance(state.waypoints[i - 1], state.waypoints[i]);
+  $('routeCount').textContent = state.waypoints.length;
+  $('routeLen').textContent = metres > 1000 ? (metres / 1000).toFixed(2) + ' km' : Math.round(metres) + ' m';
+}
+$('btnRouteUndo').onclick = () => { state.waypoints.pop(); drawRoute(); };
+$('btnRouteClear').onclick = () => { state.waypoints = []; drawRoute(); };
+$('btnRouteLoop').onclick = (e) => {
+  state.loop = !state.loop;
+  if (state.loop) state.pingPong = false;
+  syncRouteToggles();
+};
+$('btnRoutePing').onclick = () => {
+  state.pingPong = !state.pingPong;
+  if (state.pingPong) state.loop = false;
+  syncRouteToggles();
+};
+function syncRouteToggles() {
+  $('btnRouteLoop').textContent = 'Loop: ' + (state.loop ? 'on' : 'off');
+  $('btnRoutePing').textContent = 'Ping-pong: ' + (state.pingPong ? 'on' : 'off');
+  $('btnRouteLoop').classList.toggle('active', state.loop);
+  $('btnRoutePing').classList.toggle('active', state.pingPong);
+}
+$('btnRouteStart').onclick = () => {
+  if (state.waypoints.length < 2) { showBanner('Drop at least two waypoints first.', '', 'info'); return; }
+  post('/api/route', {
+    points: state.waypoints,
+    speed_kmh: Number($('speed').value),
+    loop: state.loop,
+    ping_pong: state.pingPong,
+  });
+};
+$('btnPause').onclick = () => post('/api/pause', { paused: !state.paused });
+
+$('gpxFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const res = await fetch('/api/gpx', { method: 'POST', body: await file.text() });
+  const data = await res.json();
+  if (!res.ok) { showBanner(data.detail || 'GPX parse failed', '', 'err'); return; }
+  state.waypoints = data.points;
+  drawRoute();
+  if (state.waypoints.length) map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+  showBanner(`Loaded ${data.points.length} points from GPX.`, '', 'info');
+};
+
+/* -------------------------------------------------------------- joystick */
+
+function steer(bearing) {
+  post('/api/joystick', { heading: bearing, speed_kmh: Number($('speed').value) });
+}
+$('pad').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-bearing]');
+  if (btn) steer(Number(btn.dataset.bearing));
+});
+$('btnJoyStop').onclick = () => post('/api/stop');
+
+const KEYS = { w: 0, arrowup: 0, d: 90, arrowright: 90, s: 180, arrowdown: 180, a: 270, arrowleft: 270 };
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, select, textarea')) return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); post('/api/stop'); return; }
+  if (!(k in KEYS)) return;
+  e.preventDefault();
+  steer(KEYS[k]);
+});
+
+/* ----------------------------------------------------------- speed/noise */
+
+const speedEl = $('speed');
+speedEl.oninput = () => {
+  $('speedVal').textContent = Number(speedEl.value).toFixed(1) + ' km/h';
+};
+speedEl.onchange = () => post('/api/speed', { speed_kmh: Number(speedEl.value) });
+document.querySelectorAll('button[data-speed]').forEach((b) => {
+  b.onclick = () => {
+    speedEl.value = b.dataset.speed;
+    speedEl.oninput();
+    speedEl.onchange();
+  };
+});
+const jitterEl = $('jitter');
+jitterEl.oninput = () => { $('jitterVal').textContent = jitterEl.value + ' m'; };
+jitterEl.onchange = () => post('/api/jitter', { jitter_m: Number(jitterEl.value) });
+
+$('btnFollow').onclick = () => {
+  state.follow = !state.follow;
+  $('btnFollow').textContent = 'Follow on map: ' + (state.follow ? 'on' : 'off');
+  $('btnFollow').classList.toggle('active', state.follow);
+};
+
+/* ------------------------------------------------------------- favorites */
+
+let lastSpot = null;
+
+async function loadFavorites() {
+  try {
+    const data = await (await fetch('/api/favorites')).json();
+    lastSpot = data.last || null;
+    $('btnLastSpot').disabled = !lastSpot;
+    $('btnLastSpot').title = lastSpot ? `${lastSpot.lat.toFixed(5)}, ${lastSpot.lon.toFixed(5)}` : '';
+    renderFavorites(data.favorites || []);
+  } catch (_) { /* the panel just stays empty */ }
+}
+
+function renderFavorites(list) {
+  const box = $('favList');
+  box.innerHTML = '';
+  if (!list.length) {
+    box.innerHTML = '<p class="note" style="margin:0">Nothing saved yet.</p>';
+    return;
+  }
+  list.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'fav';
+
+    const go = document.createElement('button');
+    go.className = 'go';
+    go.textContent = f.name;
+    go.title = `${f.lat.toFixed(5)}, ${f.lon.toFixed(5)}`;
+    go.onclick = () => {
+      map.setView([f.lat, f.lon], Math.max(map.getZoom(), 14));
+      post('/api/teleport', { lat: f.lat, lon: f.lon });
+    };
+
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '×';
+    del.title = 'Remove';
+    del.onclick = async (e) => {
+      e.stopPropagation();
+      const data = await post('/api/favorites/delete', { name: f.name });
+      if (data) renderFavorites(data.favorites || []);
+    };
+
+    row.append(go, del);
+    box.appendChild(row);
+  });
+}
+
+$('btnSaveFav').onclick = async () => {
+  const s = state.server;
+  const target = (s && s.lat != null) ? { lat: s.lat, lon: s.lon } : null;
+  const c = target || { lat: map.getCenter().lat, lon: map.getCenter().lng };
+  const name = prompt('Name this place:', target ? '' : 'Map centre');
+  if (name === null) return;
+  const data = await post('/api/favorites', { name, lat: c.lat, lon: c.lon });
+  if (data) renderFavorites(data.favorites || []);
+};
+
+$('btnLastSpot').onclick = () => {
+  if (!lastSpot) return;
+  map.setView([lastSpot.lat, lastSpot.lon], Math.max(map.getZoom(), 14));
+  post('/api/teleport', { lat: lastSpot.lat, lon: lastSpot.lon });
+};
+
+/* ---------------------------------------------------------------- search */
+
+const COORD_RE = /^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/;
+let lastGeocodeAt = 0;
+
+// Coordinates resolve locally as you type. Place names do NOT: Nominatim's usage policy
+// forbids autocomplete-style per-keystroke queries, so those wait for Enter.
+$('search').addEventListener('input', (e) => {
+  const q = e.target.value.trim();
+  const box = $('searchResults');
+  box.innerHTML = '';
+  if (!q) return;
+
+  const coord = q.match(COORD_RE);
+  if (coord) {
+    const lat = parseFloat(coord[1]), lon = parseFloat(coord[2]);
+    if (!(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) return;
+    const btn = document.createElement('button');
+    btn.textContent = `Go to ${lat}, ${lon}`;
+    btn.onclick = () => { map.setView([lat, lon], 16); post('/api/teleport', { lat, lon }); };
+    box.appendChild(btn);
+  } else {
+    box.innerHTML = '<p class="note" style="margin:0">Press Enter to look this up.</p>';
+  }
+});
+
+$('search').addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = e.target.value.trim();
+  if (!q || COORD_RE.test(q)) return;
+
+  // Hard-limit to one request per second, per Nominatim's policy.
+  const wait = 1000 - (Date.now() - lastGeocodeAt);
+  if (wait > 0) return;
+  lastGeocodeAt = Date.now();
+
+  const box = $('searchResults');
+  box.innerHTML = '<p class="note" style="margin:0">Searching…</p>';
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(q);
+    const hits = await (await fetch(url)).json();
+    box.innerHTML = '';
+    if (!hits.length) { box.innerHTML = '<p class="note" style="margin:0">Nothing found.</p>'; return; }
+    hits.forEach((h) => {
+      const btn = document.createElement('button');
+      btn.textContent = h.display_name;
+      btn.onclick = () => {
+        const lat = parseFloat(h.lat), lon = parseFloat(h.lon);
+        map.setView([lat, lon], 16);
+        post('/api/teleport', { lat, lon });
+      };
+      box.appendChild(btn);
+    });
+  } catch (_) {
+    box.innerHTML = '<p class="note" style="margin:0">Lookup failed. Coordinates still work.</p>';
+  }
+});
+
+syncRouteToggles();
+refreshDevices();
+loadFavorites();
+</script>
+</body>
+</html>

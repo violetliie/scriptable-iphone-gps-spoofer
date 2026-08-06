@@ -1,0 +1,47 @@
+iPhone Location Simulator
+Copyright (C) 2026 iPhone Location Simulator contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
+Third-party components
+--------------------------------------------------------------------------------
+
+pymobiledevice3
+    https://github.com/doronz88/pymobiledevice3
+    GPL-3.0-or-later
+    A runtime dependency, not bundled. It implements Apple's device protocols
+    and does all of the device communication in this project. Its copyleft is
+    why this project is also GPL-3.0-or-later.
+
+Leaflet 1.9.4
+    https://leafletjs.com
+    BSD 2-Clause
+    Bundled in static/vendor/. Full license text in static/vendor/LEAFLET-LICENSE.
+    Copyright (c) 2010-2023 Volodymyr Agafonkin
+    Copyright (c) 2010-2011 CloudMade
+
+--------------------------------------------------------------------------------
+
+Data and services used at runtime (not bundled, not redistributed)
+--------------------------------------------------------------------------------
+
+Map tiles      CARTO       https://carto.com/attributions
+Map data       OpenStreetMap contributors, ODbL
+                           https://www.openstreetmap.org/copyright
+Geocoding      Nominatim   https://operations.osmfoundation.org/policies/nominatim/
+
+The CARTO basemap and the Nominatim geocoder are free public endpoints intended
+for light use. If you fork this and expect real traffic, host your own tiles and
+your own Nominatim instance rather than pointing more load at theirs.

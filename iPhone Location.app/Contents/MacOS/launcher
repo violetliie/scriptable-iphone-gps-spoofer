@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Launcher for the iPhone Location Simulator.
+# Resolves the project directory from its own location, so the whole repo can be
+# cloned anywhere: <repo>/iPhone Location.app/Contents/MacOS/launcher -> up three.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+PROJECT="$(cd "$HERE/../../.." && pwd)"
+PORT="${SPOOFER_PORT:-8765}"
+URL="http://127.0.0.1:$PORT"
+
+cd "$PROJECT" || exit 1
+
+if [ ! -x ./run.sh ]; then
+  osascript -e 'display alert "iPhone Location" message "Could not find run.sh. Keep this app inside the project folder."'
+  exit 1
+fi
+
+if ! curl -s -m 2 "$URL/api/state" >/dev/null 2>&1; then
+  # Log outside the repo: it records the connected iPhone's name, which is usually the
+  # owner's real name, and the working tree should never be a destination for that.
+  LOGDIR="$HOME/.iphone-location-simulator"
+  mkdir -p "$LOGDIR"
+
+  # Detached, so quitting the browser never kills the server.
+  nohup ./run.sh --port "$PORT" > "$LOGDIR/server.log" 2>&1 &
+
+  # Generous: a first run builds the virtualenv and installs dependencies, which takes
+  # a minute or two on a cold machine.
+  for _ in $(seq 1 400); do
+    curl -s -m 1 "$URL/api/state" >/dev/null 2>&1 && break
+    sleep 0.5
+  done
+
+  if ! curl -s -m 2 "$URL/api/state" >/dev/null 2>&1; then
+    osascript -e "display alert \"iPhone Location\" message \"The server did not start. See $LOGDIR/server.log\""
+    exit 1
+  fi
+fi
+
+open "$URL"

@@ -1,0 +1,7 @@
+# pymobiledevice3 does all the device work. Note it is GPL-3.0-or-later; see LICENSE.
+pymobiledevice3>=10.2.1
+
+# Imported directly by spoofer/server.py. They arrive transitively via pymobiledevice3
+# today, but declaring them means a future upstream release dropping them cannot break us.
+fastapi>=0.110
+uvicorn>=0.27
