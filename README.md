@@ -8,17 +8,14 @@ nothing installed on the phone, nothing modified.
 
 ## Why I built this
 
-My parents have Find My. I have a curfew. You can see where this is going.
+I have strict asian parents, iykyk. I wanted to still go out in uni without my parents finding
+out on their Find My. But I didn't trust those free GPS spoofers (with & without jailbreak),
+didn't want to give out my bank information to some hacker.
 
 The plan was simple: build a thing that puts me at the library while I am demonstrably not at
-the library, ship it, go outside, become a normal person with a social life.
+the library, ship it, go outside, lol.
 
-The plan died on contact with iOS. The simulated location only survives while the phone is
-physically tethered by cable to a Mac that is running this app. The moment you unplug, the real
-GPS comes straight back. So the finished product lets me convincingly appear to be at the
-library, as long as I am sitting next to my laptop, with a cable, not at the library.
-
-I built a machine whose only function is to prove I am at home.
+I built a machine whose only function is to prove I am at home (or where ever they trust).
 
 Anyway, it turns out to be a genuinely useful developer tool, so here it is.
 
@@ -82,6 +79,43 @@ The heavy lifting is done by [pymobiledevice3](https://github.com/doronz88/pymob
 clean room Python implementation of Apple's device protocols. On iOS 17.4 and newer it builds
 the tunnel entirely in userspace with a pure Python TCP stack, so this runs as a normal user
 with **no sudo**, and there is no privileged helper daemon.
+
+## Stack
+
+Deliberately boring. No build step, no bundler, no framework, no database, no Docker, no
+`node_modules`. Clone it and run it.
+
+**Backend**
+
+| Piece | Role |
+| --- | --- |
+| Python 3.10+ | Async throughout. Every device call is `asyncio`, so one process holds the tunnel, the DTX channel and the HTTP server on a single event loop. |
+| [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) | Does all of the actual work: usbmux, lockdown, DDI mounting, the RemoteXPC tunnel, and the DTX protocol. GPL-3.0-or-later, which is why this project is too. |
+| FastAPI + uvicorn | JSON API and the server sent event stream. Both arrive with pymobiledevice3, but are declared explicitly in `requirements.txt` so an upstream change cannot break the app. |
+| No database | Saved places are one JSON file in `~/.iphone-location-simulator/`. |
+
+**Frontend**
+
+| Piece | Role |
+| --- | --- |
+| Vanilla JavaScript | One HTML file, no framework, no build. View source and the whole client is in front of you. |
+| [Leaflet](https://leafletjs.com) 1.9.4 | Map rendering. Vendored into `static/vendor/` rather than pulled from a CDN, so nothing executable is fetched from a third party at runtime. BSD 2-Clause. |
+| Server sent events | `/api/events` pushes session state, so the marker tracks the phone live without polling. |
+| CARTO dark basemap | Tiles over OpenStreetMap data. Nominatim handles place name lookup, on Enter only. |
+
+**Apple interfaces driven**, all through pymobiledevice3:
+
+`usbmux` for transport, `lockdownd` for pairing, `com.apple.amfi.lockdown` to un-hide the
+Developer Mode toggle, `mobile_image_mounter` for the personalized DDI, `CoreDeviceProxy` for
+the RemoteXPC tunnel, and `com.apple.instruments.dtservicehub` for the DTX channel that carries
+`LocationSimulation`.
+
+**Everything else**
+
+pytest for the geodesy, route cursor, GPX parsing and jitter distribution, none of which need a
+device. A `.app` bundle and a few `.command` files so it launches from Spotlight or Finder
+instead of a terminal. A `bootstrap.sh` that builds the virtualenv on first run from any entry
+point, and repairs it if an install is interrupted.
 
 ## Requirements
 
