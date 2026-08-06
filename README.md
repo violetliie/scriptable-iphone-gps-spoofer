@@ -4,8 +4,6 @@ Change your iPhone's reported GPS location from a map in your browser. Plug the 
 Mac, click somewhere, and every app on the phone believes that is where you are. No jailbreak,
 nothing installed on the phone, nothing modified.
 
-![The main map view](docs/screenshots/main.png)
-
 ## Why I built this
 
 I have strict asian parents, iykyk. I wanted to still go out in uni without my parents finding
@@ -210,15 +208,11 @@ just hangs.
 
 ## Modes
 
-![Route mode with waypoints](docs/screenshots/route.png)
-
 | Mode | What it does |
 | --- | --- |
 | **Teleport** | Click the map. The phone is there. |
 | **Route** | Drop waypoints, or import a GPX file, then walk the line at a set speed. Supports loop and ping pong. |
 | **Joystick** | Steer live with the on screen pad or W/A/S/D. Space stops. |
-
-![Joystick mode](docs/screenshots/joystick.png)
 
 **Saved places** stores named locations for one click recall, plus a "Last used" button.
 Everything persists in `~/.iphone-location-simulator/favorites.json`.
