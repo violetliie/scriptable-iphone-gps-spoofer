@@ -20,13 +20,20 @@
     --gray-900: #282828;
     --black: #000000;
 
+    /* Pink ramp derived from the surface colour, so controls stay legible on top of it
+       instead of vanishing into it. */
+    --pink-50: #fad2e3;
+    --pink-100: #f7c3da;
+    --pink-200: #f4b4d0;
+    --pink-300: #f1a5c7;
+
     --bg-page: var(--white);
-    --bg-surface: var(--gray-50);
+    --bg-surface: var(--pink-50);
     --text-primary: var(--black);
     --text-secondary: var(--gray-800);
     --text-muted: var(--gray-700);
     --hairline: rgba(0, 0, 0, 0.04);
-    --disabled-bg: var(--gray-50);
+    --disabled-bg: var(--pink-50);
     --disabled-text: var(--gray-400);
 
     --accent: #276ef1;
@@ -50,7 +57,7 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    display: flex; flex-direction: column;
+    display: flex;
     font-family: var(--font);
     font-size: 16px; line-height: 24px; font-weight: 400;
     background: var(--bg-page); color: var(--text-primary);
@@ -58,25 +65,19 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Black 64px band over a light page: Uber's signature anchor. */
-  header {
-    height: 64px; flex: none;
-    background: var(--black); color: var(--white);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 24px;
-  }
-  header .wordmark {
-    font-size: 20px; line-height: 28px; font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-  header .wordmark span { font-weight: 400; color: var(--gray-300); }
-  header .state {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 14px; line-height: 20px; font-weight: 500;
-  }
-
   main { flex: 1; display: flex; min-height: 0; }
-  #map { flex: 1; height: 100%; background: var(--gray-100); }
+
+  .mapwrap { position: relative; flex: 1; min-width: 0; }
+  #map { position: absolute; inset: 0; background: var(--gray-100); }
+
+  /* Wordmark floats over the map instead of sitting in a bar. */
+  #brand {
+    position: absolute; top: 24px; left: 24px; z-index: 1000;
+    font-size: 24px; line-height: 32px; font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--black);
+    pointer-events: none;
+  }
   .leaflet-container { font-family: var(--font); }
   .leaflet-control-attribution { font-size: 11px; }
 
@@ -113,12 +114,12 @@
     font-size: 16px; line-height: 20px; font-weight: 500;
     padding: 14px 16px;
     border: none; border-radius: var(--r-md);
-    background: var(--gray-100); color: var(--text-primary);
+    background: var(--pink-100); color: var(--text-primary);
     cursor: pointer; width: 100%;
     transition: background 200ms cubic-bezier(0, 0, 1, 1);
   }
-  button:hover:not(:disabled) { background: var(--gray-200); }
-  button:active:not(:disabled) { background: var(--gray-300); }
+  button:hover:not(:disabled) { background: var(--pink-200); }
+  button:active:not(:disabled) { background: var(--pink-300); }
   button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   button:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
 
@@ -126,7 +127,7 @@
   button.primary:hover:not(:disabled) { background: var(--black); }
   button.primary:active:not(:disabled) { box-shadow: rgba(255,255,255,0.2) 999px 999px 0 inset; background: var(--black); }
   button.danger { background: var(--white); color: var(--error); }
-  button.danger:hover:not(:disabled) { background: var(--gray-100); }
+  button.danger:hover:not(:disabled) { background: var(--pink-100); }
   button.compact { font-size: 14px; line-height: 16px; padding: 10px 12px; }
 
   select, input[type=text] {
@@ -162,10 +163,15 @@
     background: transparent;
     font-size: 14px; line-height: 16px; padding: 8px 4px;
   }
-  .seg button:hover:not(.active) { background: var(--gray-100); }
+  .seg button:hover:not(.active) { background: var(--pink-100); }
   .seg button.active { background: var(--black); color: var(--white); }
 
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-500, #868686); flex: none; }
+  .devstate {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; line-height: 20px; font-weight: 500;
+    margin: -4px 0 12px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-400); flex: none; }
   .dot.connected { background: #06c167; }
   .dot.connecting { background: var(--warning-bg); animation: pulse 1s infinite; }
   .dot.error { background: var(--error); }
@@ -185,7 +191,7 @@
 
   #pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   #pad button { aspect-ratio: 1; padding: 0; font-size: 18px; background: var(--white); }
-  #pad button:hover:not(:disabled) { background: var(--gray-200); }
+  #pad button:hover:not(:disabled) { background: var(--pink-200); }
   #pad .center { font-size: 12px; font-weight: 500; background: var(--black); color: var(--white); }
   #pad .center:hover:not(:disabled) { background: var(--gray-900); }
 
@@ -214,7 +220,7 @@
     text-align: left; font-size: 14px; line-height: 20px;
     padding: 10px 12px; background: var(--white);
   }
-  #searchResults button:hover { background: var(--gray-100); }
+  #searchResults button:hover { background: var(--pink-100); }
 
   .fav { display: flex; gap: 4px; }
   .fav button.go {
@@ -222,12 +228,12 @@
     font-size: 14px; line-height: 20px; padding: 10px 12px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .fav button.go:hover { background: var(--gray-100); }
+  .fav button.go:hover { background: var(--pink-100); }
   .fav button.del {
     flex: none; width: 40px; padding: 0;
     background: var(--white); color: var(--text-muted); font-size: 18px;
   }
-  .fav button.del:hover { background: var(--gray-100); color: var(--error); }
+  .fav button.del:hover { background: var(--pink-100); color: var(--error); }
 
   .divider { height: 1px; background: var(--hairline); margin: 4px 0; border: 0; }
   footer { font-size: 12px; line-height: 18px; color: var(--text-muted); padding: 4px 0 8px; }
@@ -235,17 +241,16 @@
 </head>
 <body>
 
-<header>
-  <div class="wordmark">iPhone Location <span>Simulator</span></div>
-  <div class="state"><span class="dot disconnected" id="dot"></span><span id="statusText">Disconnected</span></div>
-</header>
-
 <main>
-  <div id="map"></div>
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div id="brand">iPhone Location Simulator</div>
+  </div>
 
   <aside>
     <section>
       <h2>Device</h2>
+      <div class="devstate"><span class="dot disconnected" id="dot"></span><span id="statusText">Disconnected</span></div>
       <div class="stack">
         <select id="deviceSelect"><option value="">Scanning…</option></select>
         <div class="row">
@@ -366,7 +371,9 @@ const state = {
 
 /* ---------------------------------------------------------------- map --- */
 
-const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([37.7749, -122.4194], 13);
+// Zoom sits bottom-left so it does not collide with the floating wordmark.
+const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([37.7749, -122.4194], 13);
+L.control.zoom({ position: 'bottomleft' }).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 20,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, '
