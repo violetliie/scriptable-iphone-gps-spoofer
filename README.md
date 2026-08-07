@@ -14,7 +14,7 @@ The plan was simple: build a thing that puts me at the library while I am demons
 the library, ship it, go outside, lol.
 
 Then I found out the fake location only holds while the phone is plugged into my laptop. Unplug
-it and the real GPS is back instantly. So I can be at the library, as long as I am at home.
+it and the real GPS comes back. So I can be at the library, as long as I am at home.
 
 I built a machine whose only function is to prove I am at home (or where ever they trust).
 
@@ -200,11 +200,46 @@ Two rules that always apply:
 * **Keep the phone unlocked and plugged in.** iOS refuses these developer services to a locked
   device.
 * **Leave the app running.** The simulated fix exists only while the app holds the connection
-  open. Quit it, or unplug, and the real GPS returns immediately. This is by design and is also
-  your undo button.
+  open. See [Why you cannot unplug](#why-you-cannot-unplug) below, which is the single most
+  misunderstood thing about this whole category of tool.
 
 Do not run two copies at once. iOS allows a single client on these services, so the second one
 just hangs.
+
+## Why you cannot unplug
+
+The most common question about tools like this: can I set a location, unplug, and walk away?
+
+**On iOS 17 and newer, no.** The fix lives only as long as the developer session that set it.
+Close the app, kill the process, or pull the cable, and the phone goes back to its real GPS.
+
+**This used to work, which is why so much of the internet says it still does.** Before iOS 17,
+Apple's `com.apple.dt.simulatelocation` was fire and forget: the host sent coordinates, closed
+the socket, and iOS held the override until you rebooted. On iOS 17 that path stopped working
+and simulation moved to the session scoped DVT channel this project uses. In the words of the
+pymobiledevice3 maintainer,
+[when the process exits, the simulation ends](https://github.com/doronz88/pymobiledevice3/issues/767).
+
+You can see the change encoded in pymobiledevice3's own CLI: the modern DVT command blocks and
+holds the process open after setting a location, while the legacy pre-17 command sets and exits
+immediately. Same repository, same author, deliberately opposite lifetimes.
+
+**No tool escapes this, including the paid ones.** iToolab and Tenorshare still advertise that
+the location survives disconnection, but they are describing the pre-iOS-17 behavior. The
+"no computer needed" iPhone apps, such as iMyFone's iGo, do not get around it either. They are
+computer installed, developer signed apps that hold the session open on the phone itself behind
+a VPN profile, which is why iMyFone's own troubleshooting page tells users to
+"keep iGo running in the background" and warns the location only lasts "approximately two hours".
+
+Two details worth knowing:
+
+* **Reverting is not instant or perfectly reliable.** Nothing sends a stop command when you
+  unplug, so the cleanup is Apple's, is undocumented, and users report the phone holding the
+  stale point or reporting a very coarse fix for anywhere from seconds to minutes while
+  CoreLocation reacquires. Quitting the app cleanly is better, because this project explicitly
+  calls `stopLocationSimulation` on shutdown rather than relying on that cleanup.
+* **A reboot always clears it**, on any iOS version, because the override lives in runtime state
+  and is never written to disk.
 
 ## Modes
 
