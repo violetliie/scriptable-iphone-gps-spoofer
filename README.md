@@ -4,16 +4,18 @@ Change your iPhone's reported GPS location from a map in your browser. Plug the 
 Mac, click somewhere, and every app on the phone believes that is where you are. No jailbreak,
 nothing installed on the phone, nothing modified.
 
+![The map, with the control panel floating over it](docs/screenshots/main.png)
+
 ## Why I built this
 
-I have strict asian parents, iykyk. I wanted to still go out in uni without my parents finding
-out on their Find My. But I didn't trust those free GPS spoofers (with & without jailbreak),
+I have strict Asian parents, iykyk. I wanted to still go out in uni without my parents finding
+out on their Find My. But I didn't trust those sketchy GPS spoofers (with & without jailbreak),
 didn't want to give out my bank information to some hacker.
 
 The plan was simple: build a thing that puts me at the library while I am demonstrably not at
 the library, ship it, go outside, lol.
 
-I built a machine whose only function is to prove I am at home (or where ever they trust).
+I built a machine whose only function is to prove I am at home (or wherever they trust).
 
 Anyway, it turns out to be a genuinely useful developer tool, so here it is.
 
@@ -245,6 +247,15 @@ Two details worth knowing:
 | **Teleport** | Click the map. The phone is there. |
 | **Route** | Drop waypoints, or import a GPX file, then walk the line at a set speed. Supports loop and ping pong. |
 | **Joystick** | Steer live with the on screen pad or W/A/S/D. Space stops. |
+
+Route mode, part way through a walk across Midtown. The dashed line is the planned route and
+the numbered circles are the waypoints:
+
+![Route mode, walking a set of waypoints](docs/screenshots/route.png)
+
+Joystick mode, for steering by hand:
+
+![Joystick mode, with the direction pad](docs/screenshots/joystick.png)
 
 **Saved places** stores named locations for one click recall, plus a "Last used" button.
 Everything persists in `~/.iphone-location-simulator/favorites.json`.

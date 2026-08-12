@@ -371,7 +371,16 @@ const state = {
 // Everything hugs the bottom-left: the wordmark owns the top-left, and the floating
 // panel covers the right edge, where Leaflet would otherwise put the attribution.
 // The OSM and CARTO credits are required to stay visible, so they move too.
-const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([37.7749, -122.4194], 13);
+// Leaflet schedules tile loads through requestAnimationFrame, which a static renderer
+// running on virtual time never reliably services, so ?nostream also turns animation off.
+const STATIC_RENDER = new URLSearchParams(location.search).has('nostream');
+const map = L.map('map', {
+  zoomControl: false,
+  attributionControl: true,
+  fadeAnimation: !STATIC_RENDER,
+  zoomAnimation: !STATIC_RENDER,
+  markerZoomAnimation: !STATIC_RENDER,
+}).setView([37.7749, -122.4194], 13);
 map.attributionControl.setPosition('bottomleft');
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -487,8 +496,16 @@ function render(s) {
   }
 }
 
-const es = new EventSource('/api/events');
-es.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch (_) {} };
+// Paint once from the current state so the panel is correct immediately, rather than
+// staying blank until the first event arrives.
+fetch('/api/state').then((r) => r.json()).then(render).catch(() => {});
+
+// ?nostream skips the live stream, which leaves the page as a finite, fully loaded
+// document. Static renderers and screenshot tooling need that; nothing else does.
+if (!new URLSearchParams(location.search).has('nostream')) {
+  const es = new EventSource('/api/events');
+  es.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch (_) {} };
+}
 
 /* --------------------------------------------------------------- devices */
 
@@ -546,19 +563,28 @@ $('btnReset').onclick = () => { trail.setLatLngs([]); post('/api/clear'); };
 
 /* ----------------------------------------------------------------- modes */
 
-$('modeSeg').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-mode]');
+function selectMode(mode) {
+  const btn = $('modeSeg').querySelector(`button[data-mode="${mode}"]`);
   if (!btn) return;
-  state.mode = btn.dataset.mode;
+  state.mode = mode;
   [...$('modeSeg').children].forEach((b) => b.classList.toggle('active', b === btn));
-  $('routePanel').classList.toggle('hidden', state.mode !== 'route');
-  $('joyPanel').classList.toggle('hidden', state.mode !== 'joystick');
+  $('routePanel').classList.toggle('hidden', mode !== 'route');
+  $('joyPanel').classList.toggle('hidden', mode !== 'joystick');
   $('modeHint').textContent = {
     teleport: 'Click anywhere on the map to place the device there.',
     route: 'Click the map to drop waypoints, then walk the line.',
     joystick: 'Place yourself first, then steer. Speed applies live.',
-  }[state.mode];
+  }[mode];
+}
+
+$('modeSeg').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (btn) selectMode(btn.dataset.mode);
 });
+
+// ?mode=route opens straight into a mode, which makes a given view linkable.
+const params = new URLSearchParams(location.search);
+if (params.has('mode')) selectMode(params.get('mode'));
 
 /* ---------------------------------------------------------------- routes */
 
